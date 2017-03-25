@@ -1,13 +1,27 @@
 package com.softintouch.myapplication;
 
-import android.content.Context;
-import android.support.test.InstrumentationRegistry;
 import android.support.test.runner.AndroidJUnit4;
+import android.util.Base64;
 
 import com.softintouch.myapplication.util.CipherManager;
 
+import junit.framework.Assert;
+
 import org.junit.Test;
 import org.junit.runner.RunWith;
+
+import java.io.BufferedReader;
+import java.io.FileReader;
+import java.security.KeyFactory;
+import java.security.KeyPair;
+import java.security.KeyPairGenerator;
+import java.security.PrivateKey;
+import java.security.PublicKey;
+import java.security.SecureRandom;
+import java.security.spec.PKCS8EncodedKeySpec;
+import java.security.spec.X509EncodedKeySpec;
+
+import javax.crypto.Cipher;
 
 import static org.junit.Assert.assertEquals;
 
@@ -18,11 +32,103 @@ import static org.junit.Assert.assertEquals;
  */
 @RunWith(AndroidJUnit4.class)
 public class CipherManagerTest {
+
+    /**
+     * Generate a random key for AES 256 and Encrypt a random text with
+     * AES 256 and encrypt the key of AES 256 with RSA 2048.
+     * Then use RSA 2048 decryption to retrieve the key of AES and use
+     * it to decrypt the random text. its good to show both encrypted
+     * and decrypted message somewhere in simple GUI
+     */
     @Test
-    public void useAppContext() throws Exception {
+    public void testAESwithRSA() throws Exception {
+        String originalMessage = "Hello world";
+        System.out.println("----Message start-----");
+        System.out.println(originalMessage);
+        System.out.println("----Message end-----");
+
+        // get aes key
+        String aesKey = CipherManager.getKey();
+        System.out.println("---- AES key start-----");
+        System.out.println(aesKey);
+        System.out.println("---- AES key end-----");
+
+        // encrypt string
+        String encryptedMessage = CipherManager.encrypt(aesKey,originalMessage);
+        System.out.println("---- encrypted string start -----");
+        System.out.println(encryptedMessage);
+        System.out.println("---- encrypted string end-----");
+
+        // get RSA public key
+        String rsaPublicKey = CipherManager.getRSAPublicKeyStr();
+        System.out.println("----Public RSA key start-----");
+        System.out.println(rsaPublicKey);
+        System.out.println("----Public RSA key end-----");
+
+        // encrypted key with help aes
+        String encryptedAESKey = CipherManager.encryptRSA(CipherManager.getRSAPublicKey(rsaPublicKey), aesKey);
+        System.out.println("----Encrypted aes key start-----");
+        System.out.println(encryptedAESKey);
+        System.out.println("----Encrypted aes key end-----");
+
+        // private rsa key
+        String rsaPrivetKey = CipherManager.getRSAPrivateKey();
+        System.out.println("----Private RSA key start-----");
+        System.out.println(rsaPrivetKey);
+        System.out.println("----Private RSA KEY end-----");
+
+        // private decrypt aes key
+        String decryptedAESKey = CipherManager.decryptRSA(CipherManager.getRSAPrivateKey(rsaPrivetKey), encryptedAESKey);
+        System.out.println("----Decrypted aes key start-----");
+        System.out.println(decryptedAESKey);
+        System.out.println("----Decrypted aes key end-----");
+
+        // decrypt message
+        String decryptedMessage = CipherManager.decrypt(decryptedAESKey, encryptedMessage);
+        System.out.println("----Decrypted message start-----");
+        System.out.println(decryptedMessage);
+        System.out.println("----Decrypted message end-----");
+
+        Assert.assertEquals("Original string equal encrypted", originalMessage, decryptedMessage);
+    }
+
+
+    @Test
+    public void testAES() throws Exception {
         String str = "Hello world";
-        String encryptedString = CipherManager.encrypt(str);
-        String decryptedString = CipherManager.decrypt(encryptedString);
+        String encryptedString = CipherManager.encrypt(CipherManager.getKey(), str);
+        String decryptedString = CipherManager.decrypt(CipherManager.getKey(), encryptedString);
         assertEquals("Original string equal encrypted", str, decryptedString);
+    }
+
+    @Test
+    public void testRSA() throws Exception {
+        String message = "Hello world";
+        String publicKey = CipherManager.getRSAPublicKeyStr();
+        String privateKey = CipherManager.getRSAPrivateKey();
+
+        String encryptedString = CipherManager.encryptRSA(CipherManager.getRSAPublicKey(publicKey), message);
+        String decryptedString = CipherManager.decryptRSA(CipherManager.getRSAPrivateKey(privateKey), encryptedString);
+        assertEquals("Original string equal encrypted", message, decryptedString);
+    }
+
+
+
+    @Test
+    public void test1() throws Exception {
+        String message = "Hello world";
+        KeyPairGenerator generator = KeyPairGenerator.getInstance("RSA");
+        generator.initialize(2048, new SecureRandom());
+        KeyPair keyPair = generator.generateKeyPair();
+        String privateKeyStr = Base64.encodeToString(keyPair.getPrivate().getEncoded(), Base64.DEFAULT);
+        String publicKeyStr = Base64.encodeToString(keyPair.getPublic().getEncoded(), Base64.DEFAULT);
+        PublicKey publicKey = KeyFactory.getInstance("RSA").generatePublic(new X509EncodedKeySpec(Base64.decode(publicKeyStr, Base64.DEFAULT)));
+        Cipher cipher = Cipher.getInstance("RSA/ECB/PKCS1Padding");
+        cipher.init(Cipher.ENCRYPT_MODE, publicKey);
+        String encryptedText = Base64.encodeToString(cipher.doFinal(message.getBytes("UTF-8")), Base64.DEFAULT);
+        PrivateKey privateKey =  KeyFactory.getInstance("RSA").generatePrivate(new PKCS8EncodedKeySpec(Base64.decode(privateKeyStr, Base64.DEFAULT)));
+        cipher.init(Cipher.DECRYPT_MODE, privateKey);
+        String decryptedString = new String(cipher.doFinal (Base64.decode(encryptedText, Base64.DEFAULT)));
+        assertEquals("Original string equal encrypted", message, decryptedString);
     }
 }

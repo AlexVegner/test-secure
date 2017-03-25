@@ -40,7 +40,7 @@ public class MainActivity extends AppCompatActivity {
         mSubmit.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                String encryptedMessage = CipherManager.encrypt(mMessage.getText().toString());
+                String encryptedMessage = CipherManager.encrypt(CipherManager.getKey(), mMessage.getText().toString());
                 if (!TextUtils.isEmpty(encryptedMessage)) {
                     Call<Message> call = mApiService.addMessage(new Message(encryptedMessage));
                     call.enqueue(new Callback<Message>() {
