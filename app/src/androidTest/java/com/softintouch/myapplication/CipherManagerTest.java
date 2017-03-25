@@ -111,24 +111,4 @@ public class CipherManagerTest {
         String decryptedString = CipherManager.decryptRSA(CipherManager.getRSAPrivateKey(privateKey), encryptedString);
         assertEquals("Original string equal encrypted", message, decryptedString);
     }
-
-
-
-    @Test
-    public void test1() throws Exception {
-        String message = "Hello world";
-        KeyPairGenerator generator = KeyPairGenerator.getInstance("RSA");
-        generator.initialize(2048, new SecureRandom());
-        KeyPair keyPair = generator.generateKeyPair();
-        String privateKeyStr = Base64.encodeToString(keyPair.getPrivate().getEncoded(), Base64.DEFAULT);
-        String publicKeyStr = Base64.encodeToString(keyPair.getPublic().getEncoded(), Base64.DEFAULT);
-        PublicKey publicKey = KeyFactory.getInstance("RSA").generatePublic(new X509EncodedKeySpec(Base64.decode(publicKeyStr, Base64.DEFAULT)));
-        Cipher cipher = Cipher.getInstance("RSA/ECB/PKCS1Padding");
-        cipher.init(Cipher.ENCRYPT_MODE, publicKey);
-        String encryptedText = Base64.encodeToString(cipher.doFinal(message.getBytes("UTF-8")), Base64.DEFAULT);
-        PrivateKey privateKey =  KeyFactory.getInstance("RSA").generatePrivate(new PKCS8EncodedKeySpec(Base64.decode(privateKeyStr, Base64.DEFAULT)));
-        cipher.init(Cipher.DECRYPT_MODE, privateKey);
-        String decryptedString = new String(cipher.doFinal (Base64.decode(encryptedText, Base64.DEFAULT)));
-        assertEquals("Original string equal encrypted", message, decryptedString);
-    }
 }
